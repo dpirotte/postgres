@@ -41,6 +41,10 @@ static void pgoutput_change(LogicalDecodingContext *ctx,
 static void pgoutput_truncate(LogicalDecodingContext *ctx,
 							  ReorderBufferTXN *txn, int nrelations, Relation relations[],
 							  ReorderBufferChange *change);
+static void pgoutput_message(LogicalDecodingContext *ctx,
+							  ReorderBufferTXN *txn, XLogRecPtr message_lsn,
+							  bool transactional, const char *prefix,
+							  Size sz, const char *message);
 static bool pgoutput_origin_filter(LogicalDecodingContext *ctx,
 								   RepOriginId origin_id);
 
@@ -80,6 +84,7 @@ _PG_output_plugin_init(OutputPluginCallbacks *cb)
 	cb->begin_cb = pgoutput_begin_txn;
 	cb->change_cb = pgoutput_change;
 	cb->truncate_cb = pgoutput_truncate;
+  cb->message_cb = pgoutput_message;
 	cb->commit_cb = pgoutput_commit_txn;
 	cb->filter_by_origin_cb = pgoutput_origin_filter;
 	cb->shutdown_cb = pgoutput_shutdown;
@@ -425,6 +430,20 @@ pgoutput_truncate(LogicalDecodingContext *ctx, ReorderBufferTXN *txn,
 	MemoryContextReset(data->context);
 }
 
+static void
+pgoutput_message(LogicalDecodingContext *ctx, ReorderBufferTXN *txn, XLogRecPtr message_lsn,
+							  bool transactional, const char *prefix, Size sz, const char *message)
+{
+  OutputPluginPrepareWrite(ctx, true);
+  logicalrep_write_message(ctx->out,
+      txn,
+      message_lsn,
+      transactional,
+      prefix,
+      sz,
+      message);
+  OutputPluginWrite(ctx, true);
+}
 /*
  * Currently we always forward.
  */
