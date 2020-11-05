@@ -1936,6 +1936,9 @@ apply_dispatch(StringInfo s)
 			apply_handle_origin(s);
 			return;
 
+		case LOGICAL_REP_MSG_MESSAGE:
+			return;
+
 		case LOGICAL_REP_MSG_STREAM_START:
 			apply_handle_stream_start(s);
 			return;
