@@ -26,6 +26,7 @@ typedef struct PGOutputData
 	List	   *publications;
 	bool		binary;
 	bool		messages;
+	bool		streaming;
 } PGOutputData;
 
 #endif							/* PGOUTPUT_H */
