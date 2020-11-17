@@ -366,17 +366,29 @@ logicalrep_read_truncate(StringInfo in,
  * Write MESSAGE to stream
  */
 void
-logicalrep_write_message(StringInfo out, ReorderBufferTXN *txn, XLogRecPtr lsn,
-						 bool transactional, const char *prefix, Size sz,
+logicalrep_write_message(StringInfo out,
+						 bool in_streaming,
+						 ReorderBufferTXN *txn,
+						 XLogRecPtr lsn,
+						 bool transactional,
+						 const char *prefix,
+						 Size sz,
 						 const char *message)
 {
 	uint8		flags = 0;
+	TransactionId xid = InvalidTransactionId;
 
 	pq_sendbyte(out, LOGICAL_REP_MSG_MESSAGE);
 
 	/* encode and send message flags */
 	if (transactional)
+	{
 		flags |= MESSAGE_TRANSACTIONAL;
+		xid = txn->xid;
+	}
+
+	if (in_streaming)
+		pq_sendint32(out, xid);
 
 	pq_sendint8(out, flags);
 	pq_sendint64(out, lsn);
