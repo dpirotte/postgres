@@ -719,11 +719,13 @@ pgoutput_message(LogicalDecodingContext *ctx, ReorderBufferTXN *txn,
 				 const char *message)
 {
 	PGOutputData *data = (PGOutputData *) ctx->output_plugin_private;
+
 	if (!data->messages)
 		return;
 
 	OutputPluginPrepareWrite(ctx, true);
 	logicalrep_write_message(ctx->out,
+							 in_streaming,
 							 txn,
 							 message_lsn,
 							 transactional,
