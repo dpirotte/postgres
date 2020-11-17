@@ -760,6 +760,18 @@ apply_handle_origin(StringInfo s)
 }
 
 /*
+ * Handle MESSAGE message
+ */
+static void
+apply_handle_message(StringInfo s)
+{
+	if (handle_streamed_transaction('M', s))
+		return;
+
+  logicalrep_read_message(s);
+}
+
+/*
  * Handle STREAM START message.
  */
 static void
@@ -1937,6 +1949,7 @@ apply_dispatch(StringInfo s)
 			return;
 
 		case LOGICAL_REP_MSG_MESSAGE:
+      apply_handle_message(s);
 			return;
 
 		case LOGICAL_REP_MSG_STREAM_START:

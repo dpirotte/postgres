@@ -17,6 +17,7 @@
 #include "catalog/pg_type.h"
 #include "libpq/pqformat.h"
 #include "replication/logicalproto.h"
+#include "replication/message.h"
 #include "utils/lsyscache.h"
 #include "utils/syscache.h"
 
@@ -395,6 +396,31 @@ logicalrep_write_message(StringInfo out,
 	pq_sendstring(out, prefix);
 	pq_sendint32(out, sz);
 	pq_sendbytes(out, message, sz);
+}
+
+/*
+ * Read MESSAGE from stream
+ */
+void
+logicalrep_read_message(StringInfo in)
+{
+  uint8 flags;
+  bool transactional = true;
+  Size sz;
+  const char *prefix;
+  const char *data;
+
+	/* read and decode message flags */
+	flags = pq_getmsgint(in, 1);
+  transactional = (flags & MESSAGE_TRANSACTIONAL) > 0;
+
+  /* Ignore LSN */
+  pq_getmsgint(in, 8);
+  prefix = pq_getmsgstring(in);
+  sz = pq_getmsgint(in, 4);
+  data = pq_getmsgbytes(in, sz);
+
+  LogLogicalMessage(prefix, data, sz, transactional);
 }
 
 /*
