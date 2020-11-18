@@ -64,6 +64,7 @@ parse_subscription_options(List *options,
 						   char **synchronous_commit,
 						   bool *refresh,
 						   bool *binary_given, bool *binary,
+						   bool *messages_given, bool *messages,
 						   bool *streaming_given, bool *streaming)
 {
 	ListCell   *lc;
@@ -99,6 +100,11 @@ parse_subscription_options(List *options,
 	{
 		*binary_given = false;
 		*binary = false;
+	}
+	if (messages)
+	{
+		*messages_given = false;
+		*messages = false;
 	}
 	if (streaming)
 	{
@@ -199,6 +205,16 @@ parse_subscription_options(List *options,
 
 			*binary_given = true;
 			*binary = defGetBoolean(defel);
+		}
+		else if (strcmp(defel->defname, "messages") == 0 && messages)
+		{
+			if (*messages_given)
+				ereport(ERROR,
+						(errcode(ERRCODE_SYNTAX_ERROR),
+						 errmsg("conflicting or redundant options")));
+
+			*messages_given = true;
+			*messages = defGetBoolean(defel);
 		}
 		else if (strcmp(defel->defname, "streaming") == 0 && streaming)
 		{
@@ -361,6 +377,8 @@ CreateSubscription(CreateSubscriptionStmt *stmt, bool isTopLevel)
 	bool		slotname_given;
 	bool		binary;
 	bool		binary_given;
+	bool		messages;
+	bool		messages_given;
 	char		originname[NAMEDATALEN];
 	bool		create_slot;
 	List	   *publications;
@@ -379,6 +397,7 @@ CreateSubscription(CreateSubscriptionStmt *stmt, bool isTopLevel)
 							   &synchronous_commit,
 							   NULL,	/* no "refresh" */
 							   &binary_given, &binary,
+							   &messages_given, &messages,
 							   &streaming_given, &streaming);
 
 	/*
@@ -718,6 +737,8 @@ AlterSubscription(AlterSubscriptionStmt *stmt)
 				char	   *synchronous_commit;
 				bool		binary_given;
 				bool		binary;
+				bool		messages_given;
+				bool		messages;
 				bool		streaming_given;
 				bool		streaming;
 
@@ -730,6 +751,7 @@ AlterSubscription(AlterSubscriptionStmt *stmt)
 										   &synchronous_commit,
 										   NULL,	/* no "refresh" */
 										   &binary_given, &binary,
+										   &messages_given, &messages,
 										   &streaming_given, &streaming);
 
 				if (slotname_given)
@@ -762,6 +784,13 @@ AlterSubscription(AlterSubscriptionStmt *stmt)
 					replaces[Anum_pg_subscription_subbinary - 1] = true;
 				}
 
+				if (messages_given)
+				{
+					values[Anum_pg_subscription_subbinary - 1] =
+						BoolGetDatum(messages);
+					replaces[Anum_pg_subscription_subbinary - 1] = true;
+				}
+
 				if (streaming_given)
 				{
 					values[Anum_pg_subscription_substream - 1] =
@@ -786,6 +815,7 @@ AlterSubscription(AlterSubscriptionStmt *stmt)
 										   NULL,	/* no "copy_data" */
 										   NULL,	/* no "synchronous_commit" */
 										   NULL,	/* no "refresh" */
+										   NULL, NULL,	/* no "messages" */
 										   NULL, NULL,	/* no "binary" */
 										   NULL, NULL); /* no streaming */
 				Assert(enabled_given);
@@ -832,6 +862,7 @@ AlterSubscription(AlterSubscriptionStmt *stmt)
 										   NULL,	/* no "synchronous_commit" */
 										   &refresh,
 										   NULL, NULL,	/* no "binary" */
+										   NULL, NULL,	/* no "messages" */
 										   NULL, NULL); /* no "streaming" */
 				values[Anum_pg_subscription_subpublications - 1] =
 					publicationListToArray(stmt->publication);
@@ -875,6 +906,7 @@ AlterSubscription(AlterSubscriptionStmt *stmt)
 										   NULL,	/* no "synchronous_commit" */
 										   NULL,	/* no "refresh" */
 										   NULL, NULL,	/* no "binary" */
+										   NULL, NULL,	/* no "messages" */
 										   NULL, NULL); /* no "streaming" */
 
 				AlterSubscription_refresh(sub, copy_data);

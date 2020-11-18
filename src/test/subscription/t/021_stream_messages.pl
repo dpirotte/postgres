@@ -34,23 +34,30 @@ $node_subscriber->safe_psql('postgres',
 	"CREATE PUBLICATION pub FOR TABLE tab");
 
 $node_subscriber->safe_psql('postgres',
-	"CREATE SUBSCRIPTION sub CONNECTION '$publisher_connstr' PUBLICATION pub WITH (streaming = on)"
+	"CREATE SUBSCRIPTION sub CONNECTION '$publisher_connstr' PUBLICATION pub WITH (messages = true)"
 );
 $node_cascaded->safe_psql('postgres',
-	"CREATE SUBSCRIPTION sub CONNECTION '$subscriber_connstr' PUBLICATION pub WITH (streaming = on)"
+	"CREATE SUBSCRIPTION sub CONNECTION '$subscriber_connstr' PUBLICATION pub WITH (messages = true)"
 );
 
 $node_subscriber->safe_psql('postgres', "ALTER SUBSCRIPTION sub DISABLE");
 $node_cascaded->safe_psql('postgres', "ALTER SUBSCRIPTION sub DISABLE");
 
-$node_publisher->safe_psql('postgres', qq(
-  insert into tab values (1), (2);
-));
-
 # ensure a transactional logical decoding message shows up on the slot
 
 $node_publisher->safe_psql('postgres', qq(
+  begin;
 	select pg_logical_emit_message(true, 'a prefix', 'message 1');
+  insert into tab values (1), (2);
+  commit;
+));
+
+diag $node_publisher->safe_psql('postgres', qq(
+	select * 
+		from pg_logical_slot_peek_binary_changes('sub', NULL, NULL,
+			'proto_version', '2',
+			'publication_names', 'pub',
+			'messages', 'true')
 ));
 
 my $slot_codes_with_message = $node_publisher->safe_psql(
@@ -73,7 +80,7 @@ $node_publisher->wait_for_catchup('sub');
 my $result =
 	$node_subscriber->safe_psql('postgres', "SELECT count(*) FROM tab");
 is($result, qq(2), 'rows move to subscriber');
-
+sleep 1;
 diag $node_subscriber->safe_psql(
 	'postgres', qq(
 		select *

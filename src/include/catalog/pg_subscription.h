@@ -80,6 +80,7 @@ typedef struct Subscription
 	bool		enabled;		/* Indicates if the subscription is enabled */
 	bool		binary;			/* Indicates if the subscription wants data in
 								 * binary format */
+	bool		messages;		/* Include messages in the subscription */
 	bool		stream;			/* Allow streaming in-progress transactions. */
 	char	   *conninfo;		/* Connection string to the publisher */
 	char	   *slotname;		/* Name of the replication slot */

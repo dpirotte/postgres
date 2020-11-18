@@ -1945,11 +1945,13 @@ apply_dispatch(StringInfo s)
 			return;
 
 		case LOGICAL_REP_MSG_ORIGIN:
+      elog(WARNING, "=== DAVE ORIGIN ===");
 			apply_handle_origin(s);
 			return;
 
 		case LOGICAL_REP_MSG_MESSAGE:
-      apply_handle_message(s);
+      elog(WARNING, "=== DAVE MESSAGE ===");
+			apply_handle_message(s);
 			return;
 
 		case LOGICAL_REP_MSG_STREAM_START:
@@ -2452,6 +2454,7 @@ maybe_reread_subscription(void)
 		strcmp(newsub->name, MySubscription->name) != 0 ||
 		strcmp(newsub->slotname, MySubscription->slotname) != 0 ||
 		newsub->binary != MySubscription->binary ||
+		newsub->messages != MySubscription->messages ||
 		newsub->stream != MySubscription->stream ||
 		!equal(newsub->publications, MySubscription->publications))
 	{
@@ -3098,6 +3101,7 @@ ApplyWorkerMain(Datum main_arg)
 		LOGICALREP_PROTO_STREAM_VERSION_NUM : LOGICALREP_PROTO_VERSION_NUM;
 	options.proto.logical.publication_names = MySubscription->publications;
 	options.proto.logical.binary = MySubscription->binary;
+	options.proto.logical.messages = MySubscription->messages;
 	options.proto.logical.streaming = MySubscription->stream;
 
 	/* Start normal logical streaming replication. */
