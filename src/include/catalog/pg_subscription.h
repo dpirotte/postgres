@@ -51,6 +51,9 @@ CATALOG(pg_subscription,6100,SubscriptionRelationId) BKI_SHARED_RELATION BKI_ROW
 	bool		subbinary;		/* True if the subscription wants the
 								 * publisher to send data in binary */
 
+	bool		submessages;		/* True if the subscription wants the
+								 * publisher to send logical messages */
+
 	bool		substream;		/* Stream in-progress transactions. */
 
 #ifdef CATALOG_VARLEN			/* variable-length fields start here */

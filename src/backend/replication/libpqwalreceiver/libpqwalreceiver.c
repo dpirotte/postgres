@@ -449,6 +449,10 @@ libpqrcv_startstreaming(WalReceiverConn *conn,
 			PQserverVersion(conn->streamConn) >= 140000)
 			appendStringInfoString(&cmd, ", binary 'true'");
 
+		if (options->proto.logical.messages &&
+			PQserverVersion(conn->streamConn) >= 140000)
+			appendStringInfoString(&cmd, ", messages 'true'");
+
 		appendStringInfoChar(&cmd, ')');
 	}
 	else

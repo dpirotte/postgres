@@ -181,6 +181,8 @@ parse_output_parameters(List *options, uint32 *protocol_version,
 
 		Assert(defel->arg == NULL || IsA(defel->arg, String));
 
+		elog(WARNING, "DAVE %s", defel->defname);
+
 		/* Check each param, whether or not we recognize it */
 		if (strcmp(defel->defname, "proto_version") == 0)
 		{

@@ -6019,12 +6019,14 @@ describeSubscriptions(const char *pattern, bool verbose)
 
 	if (verbose)
 	{
-		/* Binary mode and streaming are only supported in v14 and higher */
+		/* Binary mode, messages, and streaming are only supported in v14 and higher */
 		if (pset.sversion >= 140000)
 			appendPQExpBuffer(&buf,
 							  ", subbinary AS \"%s\"\n"
+							  ", submessages AS \"%s\"\n"
 							  ", substream AS \"%s\"\n",
 							  gettext_noop("Binary"),
+							  gettext_noop("Messages"),
 							  gettext_noop("Streaming"));
 
 		appendPQExpBuffer(&buf,

@@ -65,6 +65,7 @@ GetSubscription(Oid subid, bool missing_ok)
 	sub->name = pstrdup(NameStr(subform->subname));
 	sub->owner = subform->subowner;
 	sub->enabled = subform->subenabled;
+	sub->messages = subform->submessages;
 	sub->binary = subform->subbinary;
 	sub->stream = subform->substream;
 

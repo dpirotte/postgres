@@ -465,6 +465,7 @@ CreateSubscription(CreateSubscriptionStmt *stmt, bool isTopLevel)
 	values[Anum_pg_subscription_subowner - 1] = ObjectIdGetDatum(owner);
 	values[Anum_pg_subscription_subenabled - 1] = BoolGetDatum(enabled);
 	values[Anum_pg_subscription_subbinary - 1] = BoolGetDatum(binary);
+	values[Anum_pg_subscription_submessages - 1] = BoolGetDatum(messages);
 	values[Anum_pg_subscription_substream - 1] = BoolGetDatum(streaming);
 	values[Anum_pg_subscription_subconninfo - 1] =
 		CStringGetTextDatum(conninfo);
@@ -786,9 +787,9 @@ AlterSubscription(AlterSubscriptionStmt *stmt)
 
 				if (messages_given)
 				{
-					values[Anum_pg_subscription_subbinary - 1] =
+					values[Anum_pg_subscription_submessages - 1] =
 						BoolGetDatum(messages);
-					replaces[Anum_pg_subscription_subbinary - 1] = true;
+					replaces[Anum_pg_subscription_submessages - 1] = true;
 				}
 
 				if (streaming_given)
