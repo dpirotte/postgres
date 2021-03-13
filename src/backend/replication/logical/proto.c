@@ -387,6 +387,13 @@ logicalrep_write_message(StringInfo out,
 		xid = txn->xid;
   }
 
+	/*
+	 *
+	 * This is intentionally inconsistent with other logicalrep functions.
+	 * A non-transactional message will never have a valid xid, so we need
+	 * explicit knowledge of whether we are streaming rather than inferred
+	 * knowledge based on presence of a valid xid.
+	 */
 	if (in_streaming)
 		pq_sendint32(out, xid);
 
