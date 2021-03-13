@@ -40,17 +40,17 @@ $node_publisher->safe_psql('postgres',
 
 my $result = $node_publisher->safe_psql(
 	'postgres', qq(
-		SELECT get_byte(data, 0)
+		SELECT encode(substr(data, 1, 1), 'escape')
 		FROM pg_logical_slot_peek_binary_changes('tap_sub', NULL, NULL,
 			'proto_version', '1',
 			'publication_names', 'tap_pub',
 			'messages', 'true')
 ));
 
-# 66 77 67 == B M C == BEGIN MESSAGE COMMIT
-is($result, qq(66
-77
-67),
+# BEGIN MESSAGE COMMIT
+is($result, qq(B
+M
+C),
 	'messages on slot are B M C with message option');
 
 $result = $node_publisher->safe_psql(
@@ -68,15 +68,15 @@ is($result, qq(1|pgoutput),
 
 $result = $node_publisher->safe_psql(
 	'postgres', qq(
-		SELECT get_byte(data, 0)
+		SELECT encode(substr(data, 1, 1), 'escape')
 		FROM pg_logical_slot_peek_binary_changes('tap_sub', NULL, NULL,
 			'proto_version', '1',
 			'publication_names', 'tap_pub')
 ));
 
-# 66 67 == B C == BEGIN COMMIT
-is($result, qq(66
-67),
+# BEGIN COMMIT
+is($result, qq(B
+C),
 	'option messages defaults to false so message (M) is not available on slot');
 
 $node_subscriber->safe_psql('postgres', "ALTER SUBSCRIPTION tap_sub ENABLE");
@@ -94,7 +94,7 @@ $node_publisher->safe_psql('postgres', "INSERT INTO tab_test VALUES (2)");
 
 $result = $node_publisher->safe_psql(
 	'postgres', qq(
-		SELECT get_byte(data, 0), get_byte(data, 1)
+		SELECT encode(substr(data, 1, 1), 'escape'), get_byte(data, 1)
 		FROM pg_logical_slot_peek_binary_changes('tap_sub', NULL, NULL,
 			'proto_version', '1',
 			'publication_names', 'tap_pub',
@@ -102,7 +102,7 @@ $result = $node_publisher->safe_psql(
 		WHERE lsn = '$message_lsn' AND xid = 0
 ));
 
-is($result, qq(77|0), 'non-transactional message on slot is M');
+is($result, qq(M|0), 'non-transactional message on slot is M');
 
 $node_subscriber->safe_psql('postgres', "ALTER SUBSCRIPTION tap_sub ENABLE");
 $node_publisher->wait_for_catchup('tap_sub');
@@ -115,7 +115,7 @@ $node_publisher->poll_query_until('postgres',
 
 # Ensure a non-transactional logical decoding message shows up on the slot when
 # it is emitted within an aborted transaction. The message won't emit until
-# something advances the LSN, hence, we intentionally forces the server to
+# something advances the LSN, hence, we intentionally force the server to
 # switch to a new WAL file.
 $node_publisher->safe_psql(
 	'postgres', qq(
@@ -133,15 +133,15 @@ $node_publisher->safe_psql(
 
 $result = $node_publisher->safe_psql(
 	'postgres', qq(
-		SELECT get_byte(data, 0), get_byte(data, 1)
+		SELECT encode(substr(data, 1, 1), 'escape'), get_byte(data, 1)
 		FROM pg_logical_slot_peek_binary_changes('tap_sub', NULL, NULL,
 			'proto_version', '1',
 			'publication_names', 'tap_pub',
 			'messages', 'true')
 ));
 
-is($result, qq(77|0
-77|0),
+is($result, qq(M|0
+M|0),
 	'non-transactional message on slot from aborted transaction is M');
 
 $node_subscriber->stop('fast');
