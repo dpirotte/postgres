@@ -4233,6 +4233,7 @@ getSubscriptions(Archive *fout)
 	int			i_subsynccommit;
 	int			i_subpublications;
 	int			i_subbinary;
+	int			i_submessages;
 	int			i,
 				ntups;
 
@@ -4275,6 +4276,11 @@ getSubscriptions(Archive *fout)
 	else
 		appendPQExpBufferStr(query, " false AS substream\n");
 
+	if (fout->remoteVersion >= 140000)
+		appendPQExpBufferStr(query, " s.submessages\n");
+	else
+		appendPQExpBufferStr(query, " false AS submessages\n");
+
 	appendPQExpBufferStr(query,
 						 "FROM pg_subscription s\n"
 						 "WHERE s.subdbid = (SELECT oid FROM pg_database\n"
@@ -4294,6 +4300,7 @@ getSubscriptions(Archive *fout)
 	i_subpublications = PQfnumber(res, "subpublications");
 	i_subbinary = PQfnumber(res, "subbinary");
 	i_substream = PQfnumber(res, "substream");
+	i_submessages = PQfnumber(res, "submessages");
 
 	subinfo = pg_malloc(ntups * sizeof(SubscriptionInfo));
 
@@ -4319,6 +4326,8 @@ getSubscriptions(Archive *fout)
 			pg_strdup(PQgetvalue(res, i, i_subbinary));
 		subinfo[i].substream =
 			pg_strdup(PQgetvalue(res, i, i_substream));
+		subinfo[i].submessages =
+			pg_strdup(PQgetvalue(res, i, i_submessages));
 
 		if (strlen(subinfo[i].rolname) == 0)
 			pg_log_warning("owner of subscription \"%s\" appears to be invalid",
@@ -4386,6 +4395,9 @@ dumpSubscription(Archive *fout, const SubscriptionInfo *subinfo)
 
 	if (strcmp(subinfo->substream, "f") != 0)
 		appendPQExpBufferStr(query, ", streaming = on");
+
+	if (strcmp(subinfo->submessages, "f") != 0)
+		appendPQExpBufferStr(query, ", messages = on");
 
 	if (strcmp(subinfo->subsynccommit, "off") != 0)
 		appendPQExpBuffer(query, ", synchronous_commit = %s", fmtId(subinfo->subsynccommit));

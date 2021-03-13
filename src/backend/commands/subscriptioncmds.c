@@ -67,7 +67,8 @@ parse_subscription_options(List *options,
 						   char **synchronous_commit,
 						   bool *refresh,
 						   bool *binary_given, bool *binary,
-						   bool *streaming_given, bool *streaming)
+						   bool *streaming_given, bool *streaming,
+						   bool *messages_given, bool *messages)
 {
 	ListCell   *lc;
 	bool		connect_given = false;
@@ -107,6 +108,11 @@ parse_subscription_options(List *options,
 	{
 		*streaming_given = false;
 		*streaming = false;
+	}
+	if (messages)
+	{
+		*messages_given = false;
+		*messages = false;
 	}
 
 	/* Parse options */
@@ -212,6 +218,16 @@ parse_subscription_options(List *options,
 
 			*streaming_given = true;
 			*streaming = defGetBoolean(defel);
+		}
+		else if (strcmp(defel->defname, "messages") == 0 && messages)
+		{
+			if (*messages_given)
+				ereport(ERROR,
+						(errcode(ERRCODE_SYNTAX_ERROR),
+						 errmsg("conflicting or redundant options")));
+
+			*messages_given = true;
+			*messages = defGetBoolean(defel);
 		}
 		else
 			ereport(ERROR,
@@ -364,6 +380,8 @@ CreateSubscription(CreateSubscriptionStmt *stmt, bool isTopLevel)
 	bool		slotname_given;
 	bool		binary;
 	bool		binary_given;
+	bool		messages;
+	bool		messages_given;
 	char		originname[NAMEDATALEN];
 	bool		create_slot;
 	List	   *publications;
@@ -382,7 +400,8 @@ CreateSubscription(CreateSubscriptionStmt *stmt, bool isTopLevel)
 							   &synchronous_commit,
 							   NULL,	/* no "refresh" */
 							   &binary_given, &binary,
-							   &streaming_given, &streaming);
+							   &streaming_given, &streaming,
+							   &messages_given, &messages);
 
 	/*
 	 * Since creating a replication slot is not transactional, rolling back
@@ -450,6 +469,7 @@ CreateSubscription(CreateSubscriptionStmt *stmt, bool isTopLevel)
 	values[Anum_pg_subscription_subenabled - 1] = BoolGetDatum(enabled);
 	values[Anum_pg_subscription_subbinary - 1] = BoolGetDatum(binary);
 	values[Anum_pg_subscription_substream - 1] = BoolGetDatum(streaming);
+	values[Anum_pg_subscription_submessages - 1] = BoolGetDatum(messages);
 	values[Anum_pg_subscription_subconninfo - 1] =
 		CStringGetTextDatum(conninfo);
 	if (slotname)
@@ -825,6 +845,8 @@ AlterSubscription(AlterSubscriptionStmt *stmt, bool isTopLevel)
 				bool		binary;
 				bool		streaming_given;
 				bool		streaming;
+				bool		messages_given;
+				bool		messages;
 
 				parse_subscription_options(stmt->options,
 										   NULL,	/* no "connect" */
@@ -835,7 +857,8 @@ AlterSubscription(AlterSubscriptionStmt *stmt, bool isTopLevel)
 										   &synchronous_commit,
 										   NULL,	/* no "refresh" */
 										   &binary_given, &binary,
-										   &streaming_given, &streaming);
+										   &streaming_given, &streaming,
+										   &messages_given, &messages);
 
 				if (slotname_given)
 				{
@@ -874,6 +897,13 @@ AlterSubscription(AlterSubscriptionStmt *stmt, bool isTopLevel)
 					replaces[Anum_pg_subscription_substream - 1] = true;
 				}
 
+				if (messages_given)
+				{
+					values[Anum_pg_subscription_submessages - 1] =
+						BoolGetDatum(messages);
+					replaces[Anum_pg_subscription_submessages - 1] = true;
+				}
+
 				update_tuple = true;
 				break;
 			}
@@ -892,7 +922,8 @@ AlterSubscription(AlterSubscriptionStmt *stmt, bool isTopLevel)
 										   NULL,	/* no "synchronous_commit" */
 										   NULL,	/* no "refresh" */
 										   NULL, NULL,	/* no "binary" */
-										   NULL, NULL); /* no streaming */
+										   NULL, NULL,  /* no streaming */
+										   NULL, NULL); /* no messages */
 				Assert(enabled_given);
 
 				if (!sub->slotname && enabled)
@@ -937,7 +968,8 @@ AlterSubscription(AlterSubscriptionStmt *stmt, bool isTopLevel)
 										   NULL,	/* no "synchronous_commit" */
 										   &refresh,
 										   NULL, NULL,	/* no "binary" */
-										   NULL, NULL); /* no "streaming" */
+										   NULL, NULL,  /* no "streaming" */
+										   NULL, NULL); /* no "messages" */
 				values[Anum_pg_subscription_subpublications - 1] =
 					publicationListToArray(stmt->publication);
 				replaces[Anum_pg_subscription_subpublications - 1] = true;
@@ -982,7 +1014,8 @@ AlterSubscription(AlterSubscriptionStmt *stmt, bool isTopLevel)
 										   NULL,	/* no "synchronous_commit" */
 										   NULL,	/* no "refresh" */
 										   NULL, NULL,	/* no "binary" */
-										   NULL, NULL); /* no "streaming" */
+										   NULL, NULL,  /* no "streaming" */
+										   NULL, NULL); /* no "messages" */
 
 				PreventInTransactionBlock(isTopLevel, "ALTER SUBSCRIPTION ... REFRESH");
 

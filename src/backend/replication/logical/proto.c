@@ -17,6 +17,7 @@
 #include "catalog/pg_type.h"
 #include "libpq/pqformat.h"
 #include "replication/logicalproto.h"
+#include "replication/message.h"
 #include "utils/lsyscache.h"
 #include "utils/syscache.h"
 
@@ -388,7 +389,6 @@ logicalrep_write_message(StringInfo out,
   }
 
 	/*
-	 *
 	 * This is intentionally inconsistent with other logicalrep functions.
 	 * A non-transactional message will never have a valid xid, so we need
 	 * explicit knowledge of whether we are streaming rather than inferred
@@ -402,6 +402,19 @@ logicalrep_write_message(StringInfo out,
 	pq_sendstring(out, prefix);
 	pq_sendint32(out, sz);
 	pq_sendbytes(out, message, sz);
+}
+
+/*
+ * Read MESSAGE from the stream.
+ */
+void
+logicalrep_read_message(StringInfo in, LogicalRepMessageData *message_data)
+{
+	message_data->flags = pq_getmsgbyte(in);
+	message_data->lsn = pq_getmsgint64(in);
+	message_data->prefix = pq_getmsgstring(in);
+	message_data->sz = pq_getmsgint(in, 4);
+	message_data->message = pq_getmsgbytes(in, message_data->sz);
 }
 
 /*

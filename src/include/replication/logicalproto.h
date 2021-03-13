@@ -122,6 +122,16 @@ typedef struct LogicalRepCommitData
 	TimestampTz committime;
 } LogicalRepCommitData;
 
+/* Logical message info */
+typedef struct LogicalRepMessageData
+{
+	uint8 flags;
+	XLogRecPtr lsn;
+	char *prefix;
+	Size sz;
+	char *message;
+} LogicalRepMessageData;
+
 extern void logicalrep_write_begin(StringInfo out, ReorderBufferTXN *txn);
 extern void logicalrep_read_begin(StringInfo in,
 								  LogicalRepBeginData *begin_data);
@@ -155,6 +165,8 @@ extern List *logicalrep_read_truncate(StringInfo in,
 extern void logicalrep_write_message(StringInfo out, bool in_streaming,
 									 ReorderBufferTXN *txn, XLogRecPtr lsn,
 									 bool transactional, const char *prefix, Size sz, const char *message);
+extern void logicalrep_read_message(StringInfo in,
+								  LogicalRepMessageData *message_data);
 extern void logicalrep_write_rel(StringInfo out, TransactionId xid,
 								 Relation rel);
 extern LogicalRepRelation *logicalrep_read_rel(StringInfo in);

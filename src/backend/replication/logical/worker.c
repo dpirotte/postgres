@@ -740,6 +740,23 @@ apply_handle_origin(StringInfo s)
 }
 
 /*
+ * Handle MESSAGE message.
+ */
+static void
+apply_handle_message(StringInfo s)
+{
+	LogicalRepMessageData message_data;
+	XLogRecPtr lsn;
+
+	logicalrep_read_message(s, &message_data);
+
+	lsn = LogLogicalMessage(message_data.prefix,
+			message_data.message,
+			message_data.sz,
+			true);
+}
+
+/*
  * Handle STREAM START message.
  */
 static void
@@ -1940,12 +1957,7 @@ apply_dispatch(StringInfo s)
 			return;
 
 		case LOGICAL_REP_MSG_MESSAGE:
-
-			/*
-			 * Logical replication does not use generic logical messages yet.
-			 * Although, it could be used by other applications that use this
-			 * output plugin.
-			 */
+			apply_handle_message(s);
 			return;
 
 		case LOGICAL_REP_MSG_STREAM_START:
@@ -3094,6 +3106,7 @@ ApplyWorkerMain(Datum main_arg)
 	options.proto.logical.publication_names = MySubscription->publications;
 	options.proto.logical.binary = MySubscription->binary;
 	options.proto.logical.streaming = MySubscription->stream;
+	options.proto.logical.messages = MySubscription->messages;
 
 	/* Start normal logical streaming replication. */
 	walrcv_startstreaming(wrconn, &options);

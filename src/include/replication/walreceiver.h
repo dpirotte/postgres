@@ -181,6 +181,7 @@ typedef struct
 			List	   *publication_names;	/* String list of publications */
 			bool		binary; /* Ask publisher to use binary */
 			bool		streaming;	/* Streaming of large transactions */
+			bool		messages;	/* Ask publisher to include logical messages */
 		}			logical;
 	}			proto;
 } WalRcvStreamOptions;
