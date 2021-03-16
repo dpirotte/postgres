@@ -37,19 +37,20 @@ my $publisher_connstr = $node_publisher->connstr . ' dbname=postgres';
 $node_publisher->safe_psql('postgres', "CREATE PUBLICATION tap_pub FOR TABLE tab_test");
 
 $node_subscriber->safe_psql('postgres',
-	"CREATE SUBSCRIPTION tap_sub CONNECTION '$publisher_connstr' PUBLICATION tap_pub WITH (streaming = on, messages = on)"
+	"CREATE SUBSCRIPTION tap_sub CONNECTION '$publisher_connstr' PUBLICATION tap_pub WITH (messages = on)"
 );
 
 my $subscriber_connstr = $node_subscriber->connstr . ' dbname=postgres';
 $node_subscriber->safe_psql('postgres', "CREATE PUBLICATION tap_cascaded_pub FOR TABLE tab_test");
 
 $node_cascaded->safe_psql('postgres',
-	"CREATE SUBSCRIPTION tap_cascaded_sub CONNECTION '$subscriber_connstr' PUBLICATION tap_cascaded_pub WITH (streaming = on, messages = on)"
+	"CREATE SUBSCRIPTION tap_cascaded_sub CONNECTION '$subscriber_connstr' PUBLICATION tap_cascaded_pub WITH (messages = on)"
 );
 
 $node_cascaded->safe_psql('postgres', 'ALTER SUBSCRIPTION tap_cascaded_sub DISABLE');
 
 $node_publisher->safe_psql('postgres', qq(
+	SELECT pg_logical_emit_message(false, 'pgoutput', 'non-transactional message');
 	BEGIN;
 	INSERT INTO tab_test VALUES (1);
 	SELECT pg_logical_emit_message(true, 'pgoutput', 'transactional message');
